@@ -2,6 +2,7 @@
 """
 Created on Thu Nov 23 09:26:20 2023
 
+Description: Research for game information
 @author: vincentkuo
 """
 
@@ -12,13 +13,13 @@ import numpy as np
 
 gameIDList = ['0022301201','0022301203']
 gameIDList = [] # 25 ~ 38
-for i in range(7):
-    gameIDList.append('00'+str(i+22300946)) # 304 13  69
+for i in range(6):
+    gameIDList.append('00'+str(i+22301158)) # 304 13  69
 #    if i == 3:  gameIDList.pop()
-#gameIDList.append('00'+str(22300576))
+#gameIDList.append('00'+str(22300589))
 #gameIDList = ['0032300001']
 
-li = [['team','name','min','pts','ass','reb','stl','blk','to','foul','%','2%','3%','3#','3#/','2#','2#/','1#','1#/','EFF']]
+li = [['team','num','name','min','pts','ass','reb','stl','blk','to','foul','%','2%','3%','3#','3#/','2#','2#/','1#','1#/','EFF']]
 for gameID in gameIDList:
 
     box = BoxScore(gameID)
@@ -35,6 +36,7 @@ for gameID in gameIDList:
         else:
             temp = []
             temp.append(box_dict['game']['awayTeam']['teamTricode'])
+            temp.append(i['jerseyNum'])
             temp.append(i['name'])
             temp.append(i['statistics']['minutes'])
             temp.append(i['statistics']['points'])
@@ -61,6 +63,7 @@ for gameID in gameIDList:
         else:
             temp = []
             temp.append(box_dict['game']['homeTeam']['teamTricode'])
+            temp.append(i['jerseyNum'])
             temp.append(i['name'])
             temp.append(i['statistics']['minutes'])
             temp.append(i['statistics']['points'])
@@ -82,8 +85,7 @@ for gameID in gameIDList:
             temp.append(i['statistics']['plusMinusPoints'])
             li.append(temp)
     
-teamDF = pd.DataFrame(np.array(li[1:]),columns=np.array(li[0]))
-teamDF = teamDF.astype({'pts': 'int64','ass': 'int64','reb': 'int64','stl': 'int64','blk': 'int64',
+nba_gameDataDF = pd.DataFrame(np.array(li[1:]),columns=np.array(li[0]))
+nba_gameDataDF = nba_gameDataDF.astype({'pts': 'int64','ass': 'int64','reb': 'int64','stl': 'int64','blk': 'int64',
                         'to': 'int64','foul': 'int64','%': 'float64','2%': 'float64','3%': 'float64',
                         '3#':'int64','3#/':'int64','2#':'int64','2#/':'int64','1#':'int64','1#/':'int64','EFF':'float64'})
-#print(teamDF)
