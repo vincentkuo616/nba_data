@@ -11,41 +11,41 @@ from nba_api.live.nba.endpoints import scoreboard
 import pandas as pd
 
 # Pull data for the top 500 scorers by PTS column
-top_500 = leagueleaders.LeagueLeaders(
+nba_players = leagueleaders.LeagueLeaders(
     season='2023-24',
     season_type_all_star='Regular Season',
     stat_category_abbreviation='PTS'
 ).get_data_frames()[0][:]
 
 # Group players by name and player ID and calculate average stats
-top_500_avg = top_500.groupby(['PLAYER', 'PLAYER_ID', 'TEAM']).mean()[[
+nba_players_avg = nba_players.groupby(['PLAYER', 'PLAYER_ID', 'TEAM']).mean()[[
     'MIN', 'FGM', 'FGA', 'FTM', 'FTA', 'PTS', 'FG3M', 'FG3A', 'OREB', 'DREB', 'REB', 'AST', 'STL', 'BLK', 'TOV', 'PF', 'EFF', 'AST_TOV', 'STL_TOV', 'GP'
 ]]
 
 
 #print(top_500_avg)
 
-top_500_avg['A_PTS']=top_500_avg['PTS']/top_500_avg['GP']
-top_500_avg['A_OREB']=top_500_avg['OREB']/top_500_avg['GP']
-top_500_avg['A_DREB']=top_500_avg['DREB']/top_500_avg['GP']
-top_500_avg['A_REB']=top_500_avg['REB']/top_500_avg['GP']
-top_500_avg['A_AST']=top_500_avg['AST']/top_500_avg['GP']
-top_500_avg['A_STL']=top_500_avg['STL']/top_500_avg['GP']
-top_500_avg['A_BLK']=top_500_avg['BLK']/top_500_avg['GP']
-top_500_avg['A_TOV']=top_500_avg['TOV']/top_500_avg['GP']
-top_500_avg['A_PF']=top_500_avg['PF']/top_500_avg['GP']
-top_500_avg['A_EFF']=top_500_avg['EFF']/top_500_avg['GP']
-top_500_avg['3_%']=top_500_avg['FG3M']/top_500_avg['FG3A']
-top_500_avg['FG_%']=top_500_avg['FGM']/top_500_avg['FGA']
-top_500_avg['FT_%']=top_500_avg['FTM']/top_500_avg['FTA']
-top_500_avg['A_3']=top_500_avg['FG3A']/top_500_avg['GP']
-top_500_avg['A_FGA']=top_500_avg['FGA']/top_500_avg['GP']
-top_500_avg['A_FTA']=top_500_avg['FTA']/top_500_avg['GP']
+nba_players_avg['A_PTS']=nba_players_avg['PTS']/nba_players_avg['GP']
+nba_players_avg['A_OREB']=nba_players_avg['OREB']/nba_players_avg['GP']
+nba_players_avg['A_DREB']=nba_players_avg['DREB']/nba_players_avg['GP']
+nba_players_avg['A_REB']=nba_players_avg['REB']/nba_players_avg['GP']
+nba_players_avg['A_AST']=nba_players_avg['AST']/nba_players_avg['GP']
+nba_players_avg['A_STL']=nba_players_avg['STL']/nba_players_avg['GP']
+nba_players_avg['A_BLK']=nba_players_avg['BLK']/nba_players_avg['GP']
+nba_players_avg['A_TOV']=nba_players_avg['TOV']/nba_players_avg['GP']
+nba_players_avg['A_PF']=nba_players_avg['PF']/nba_players_avg['GP']
+nba_players_avg['A_EFF']=nba_players_avg['EFF']/nba_players_avg['GP']
+nba_players_avg['3_%']=nba_players_avg['FG3M']/nba_players_avg['FG3A']
+nba_players_avg['FG_%']=nba_players_avg['FGM']/nba_players_avg['FGA']
+nba_players_avg['FT_%']=nba_players_avg['FTM']/nba_players_avg['FTA']
+nba_players_avg['A_3']=nba_players_avg['FG3A']/nba_players_avg['GP']
+nba_players_avg['A_FGA']=nba_players_avg['FGA']/nba_players_avg['GP']
+nba_players_avg['A_FTA']=nba_players_avg['FTA']/nba_players_avg['GP']
 
 
 
 # Team INFORMATION
-teams = leaguestandings.LeagueStandings(season='2023-24').get_data_frames()[0][:]
+nba_teams = leaguestandings.LeagueStandings(season='2023-24').get_data_frames()[0][:]
 #print(teams)
 
 games = scoreboard.ScoreBoard()
