@@ -2,6 +2,7 @@
 """
 Created on Thu Nov 16 09:57:01 2023
 
+Description: 1.NBA players data 2.NBA teams data 3.Live Gaming
 @author: vincentkuo
 """
 
@@ -100,6 +101,11 @@ def findID(name, team_name):
             teamID = team['id']
             return playerID, teamID
     return False
+
+def findPlayByPlay(gameID):
+    from nba_api.live.nba.endpoints import PlayByPlay
+    return PlayByPlay(gameID).nba_response.get_dict()
+    
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
