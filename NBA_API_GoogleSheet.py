@@ -48,16 +48,20 @@ pd.set_option("display.precision", 1)
 from datetime import datetime
 import os
 
-# --- 新增執行日期欄位 ---
-# 使用 datetime 獲取當前日期，格式化為 yyyy/mm/dd
+# --- 1. 準備資料 ---
+# 新增執行日期欄位
 current_date = datetime.now().strftime('%Y/%m/%d')
 nba_players_avg.insert(0, 'EXECUTION_DATE', current_date)
 
-# --- 儲存為 CSV ---
-# 移除非法字元（例如將 2025-26 轉為檔名的一部分）
+# 定義檔名
 file_name = f"NBA_Players_{season}.csv"
 
-# 儲存檔案（index=True 因為你的資料目前以 PLAYER, ID, TEAM 為索引）
-nba_players_avg.to_csv(file_name, encoding='utf-8-sig')
-
-print(f"成功儲存檔案: {file_name}，執行日期: {current_date}")
+# --- 2. 判斷檔案是否存在並寫入 ---
+if not os.path.exists(file_name):
+    # 如果檔案不存在：新建檔案，寫入標題列 (header=True)
+    nba_players_avg.to_csv(file_name, index=True, encoding='utf-8-sig')
+    print(f"🆕 檔案不存在，已建立新檔: {file_name}")
+else:
+    # 如果檔案已存在：附加在最後面 (mode='a')，且不重複寫入標題 (header=False)
+    nba_players_avg.to_csv(file_name, mode='a', index=True, header=False, encoding='utf-8-sig')
+    print(f"📝 檔案已存在，已將資料附加至: {file_name}")
