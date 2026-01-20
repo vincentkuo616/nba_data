@@ -27,7 +27,7 @@ jobs:
           pip install nba_api pandas
 
       - name: Run script
-        run: python NBA_API_GoogleSheet.py.py
+        run: python NBA_API_GoogleSheet.py
 
       - name: Commit and push if changed
         run: |
