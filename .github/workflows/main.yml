@@ -26,13 +26,24 @@ jobs:
         run: |
           pip install nba_api pandas
 
-      - name: Run script
+      # 執行第一個腳本
+      - name: Run NBA API Player Stats
+        continue-on-error: true  # 即使這個失敗，也會繼續執行下一步
         run: python NBA_API_GoogleSheet.py
+
+      # 執行第二個腳本
+      - name: Run NBA API Game Stats
+        continue-on-error: true
+        run: python NBA_API_GAME_GoogleSheet.py
 
       - name: Commit and push if changed
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add *.csv
-          # 只有在檔案有變動時才 commit，避免報錯
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto update NBA data: $(date +'%Y-%m-%d')" && git push)
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "Auto update NBA data: $(date +'%Y-%m-%d')"
+            git push
+          else
+            echo "No changes to commit"
+          fi
