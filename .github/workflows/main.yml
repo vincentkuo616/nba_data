@@ -2,7 +2,7 @@ name: Update NBA Data
 
 on:
   schedule:
-    - cron: '0 10 * * *' # 每天自動執行
+    - cron: '18 10 * * *' # 每天自動執行
   workflow_dispatch: # 也可以手動點擊執行
 
 jobs:
