@@ -4,10 +4,25 @@ from nba_api.live.nba.endpoints import scoreboard
 import pandas as pd
 
 # Pull data for the top 500 scorers by PTS column
-season = '2025-26'
+
+from datetime import datetime
+
+# 獲取當前年份與月份
+now = datetime.now()
+current_year = now.year
+current_month = now.month
+
+# 判斷賽季
+# 如果是 8 月(含)之後，賽季為 "今年-明年"
+# 如果是 7 月(含)之前，賽季為 "去年-今年"
+if current_month >= 8:
+    season = f"{current_year}-{str(current_year + 1)[-2:]}"
+else:
+    season = f"{current_year - 1}-{str(current_year)[-2:]}"
+    
 season_type = 'Regular Season' #--Playoffs  Regular Season  All Star
 nba_players = leagueleaders.LeagueLeaders(
-    season=season, #--2023-24
+    season=season,
     season_type_all_star=season_type, #--Playoffs  Regular Season  All Star
     stat_category_abbreviation='PTS'
 ).get_data_frames()[0][:]
