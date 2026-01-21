@@ -34,7 +34,7 @@ jobs:
       # 執行第二個腳本
       - name: Run NBA API Game Stats
         continue-on-error: true
-        run: python NBA_API_GAME_GoogleSheet.py
+        run: python NBA_GAME_API_GoogleSheet.py
 
       - name: Commit and push if changed
         run: |
