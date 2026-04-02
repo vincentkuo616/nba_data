@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA 球員單場比賽數據 (Game Log)</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/1.7.0/css/colReorder.dataTables.min.css">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 20px; background-color: #f0f2f5; }
+        h2 { color: #1d428a; border-left: 8px solid #c8102e; padding-left: 15px; }
+        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        
+        .filter-section { 
+            margin-bottom: 20px; 
+            display: flex; 
+            gap: 15px; 
+            flex-wrap: wrap;
+            align-items: center; 
+            background: #fff5f5; 
+            padding: 20px; 
+            border-radius: 8px;
+            border: 1px solid #ffcccc;
+        }
+        .filter-item { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 0.85em; font-weight: bold; color: #555; }
+        select { padding: 8px; border-radius: 5px; border: 1px solid #ced4da; min-width: 160px; background: white; }
+        
+        th { cursor: move; background-color: #f8f9fa; }
+        table.dataTable { font-size: 0.85em; }
+        
+        /* 數值樣式 */
+        .eff-positive { color: #28a745; font-weight: bold; }
+        .eff-negative { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📊 NBA 每場比賽詳細數據 (Game Log)</h2>
+    
+    <div class="filter-section">
+        <div class="filter-item">
+            <label>比賽日期:</label>
+            <select id="dateFilter"><option value="">所有日期</option></select>
+        </div>
+        <div class="filter-item">
+            <label>隊伍:</label>
+            <select id="teamFilter"><option value="">所有隊伍</option></select>
+        </div>
+        <div class="filter-item">
+            <label>球員:</label>
+            <select id="playerFilter"><option value="">所有球員</option></select>
+        </div>
+        <div style="margin-left: auto; color: #666; font-size: 0.8em;">* 支援欄位拖拉更換順序</div>
+    </div>
+
+    <table id="perGameTable" class="display nowrap" style="width:100%">
+        <thead><tr id="tableHeader"></tr></thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/colreorder/1.7.0/js/dataTables.colReorder.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+
+<script>
+    const csvUrl = 'https://raw.githubusercontent.com/vincentkuo616/nba_data/main/NBA_Players_PerGame_2025-26.csv'; 
+    let allData = [];
+    let table;
+
+    // ISO 8601 Duration 轉換函數 (PT30M16.00S -> 30:16)
+    function formatDuration(iso) {
+        if (!iso || !iso.startsWith('PT')) return iso;
+        let m = iso.match(/(\d+)M/);
+        let s = iso.match(/(\d+)(\.\d+)?S/);
+        let min = m ? m[1] : "0";
+        let sec = s ? s[1] : "00";
+        return `${min}:${sec.padStart(2, '0')}`;
+    }
+
+    $(document).ready(function() {
+        Papa.parse(csvUrl, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                // 資料清洗與格式化
+                allData = results.data.map(row => {
+                    for (let key in row) {
+                        // 1. 處理時間格式
+                        if (key === 'min') {
+                            row[key] = formatDuration(row[key]);
+                        }
+                        // 2. 處理百分比欄位 (%, 2%, 3%)
+                        else if (key.includes('%')) {
+                            let val = parseFloat(row[key]);
+                            if (!isNaN(val)) row[key] = (val * 100).toFixed(1) + '%';
+                        }
+                        // 3. 處理其他長小數點
+                        else if (!isNaN(row[key]) && row[key].toString().includes('.')) {
+                            let val = parseFloat(row[key]);
+                            row[key] = val.toFixed(3);
+                        }
+                    }
+                    return row;
+                });
+
+                const columns = Object.keys(allData[0]).filter(c => c !== ""); // 過濾掉第一欄空的 index
+
+                // 生成表頭
+                let headerHtml = '';
+                columns.forEach(col => headerHtml += `<th>${col}</th>`);
+                $('#tableHeader').html(headerHtml);
+
+                // 初始化 DataTable
+                table = $('#perGameTable').DataTable({
+                    data: allData,
+                    columns: columns.map(col => {
+                        return { 
+                            data: col,
+                            render: function(data, type, row) {
+                                if (col === 'EFF' && type === 'display') {
+                                    let val = parseFloat(data);
+                                    return `<span class="${val >= 0 ? 'eff-positive' : 'eff-negative'}">${data}</span>`;
+                                }
+                                return data;
+                            }
+                        };
+                    }),
+                    colReorder: true,
+                    scrollX: true,
+                    pageLength: 15,
+                    order: [[1, 'desc']], // 預設依日期排序
+                    language: {
+                        search: "快速搜尋：",
+                        info: "顯示 _TOTAL_ 筆比賽紀錄"
+                    }
+                });
+
+                // 初始化選單
+                const dates = [...new Set(allData.map(item => item.EXECUTION_DATE))].sort().reverse();
+                const teams = [...new Set(allData.map(item => item.team))].sort();
+                dates.forEach(d => d && $('#dateFilter').append(`<option value="${d}">${d}</option>`));
+                teams.forEach(t => t && $('#teamFilter').append(`<option value="${t}">${t}</option>`));
+
+                // 篩選邏輯
+                $('#dateFilter, #teamFilter').on('change', function() {
+                    const dateVal = $('#dateFilter').val();
+                    const teamVal = $('#teamFilter').val();
+                    table.column(1).search(dateVal).column(2).search(teamVal).draw();
+                    updatePlayerOptions(dateVal, teamVal);
+                });
+
+                $('#playerFilter').on('change', function() {
+                    table.column(4).search($(this).val()).draw(); // name 在第 5 欄 (index 4)
+                });
+
+                updatePlayerOptions('', '');
+            }
+        });
+
+        function updatePlayerOptions(date, team) {
+            const $playerSelect = $('#playerFilter');
+            $playerSelect.html('<option value="">所有球員</option>');
+            let filtered = allData;
+            if (date) filtered = filtered.filter(d => d.EXECUTION_DATE === date);
+            if (team) filtered = filtered.filter(d => d.team === team);
+            const players = [...new Set(filtered.map(item => item.name))].sort();
+            players.forEach(p => p && $playerSelect.append(`<option value="${p}">${p}</option>`));
+        }
+    });
+</script>
+
+</body>
+</html>
