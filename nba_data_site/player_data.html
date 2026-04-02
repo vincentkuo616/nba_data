@@ -3,66 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2026 NBA 球員數據查詢</title>
+    <title>2026 NBA 數據中心</title>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/1.7.0/css/colReorder.dataTables.min.css">
     <style>
-        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f9; }
-        h2 { color: #E65100; } /* NBA Orange */
-        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f0f2f5; }
+        h2 { color: #1d428a; border-left: 8px solid #c8102e; padding-left: 15px; } /* NBA Colors */
+        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         
-        /* NBA 風格篩選區 */
         .filter-section { 
             margin-bottom: 20px; 
             display: flex; 
             gap: 15px; 
+            flex-wrap: wrap;
             align-items: center; 
-            background: #fff3e0; 
-            padding: 15px; 
-            border-radius: 5px; 
-            border-left: 5px solid #E65100;
+            background: #f8f9fa; 
+            padding: 20px; 
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
         }
-        select { padding: 6px; border-radius: 4px; border: 1px solid #ccc; min-width: 150px; }
+        .filter-item { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 0.85em; font-weight: bold; color: #555; }
+        select { padding: 8px; border-radius: 5px; border: 1px solid #ced4da; min-width: 160px; background: white; }
         
-        /* 讓表格文字小一點，因為欄位很多 */
-        #nbaTable { font-size: 0.9em; }
+        /* 拖拉欄位的視覺提示 */
+        th { cursor: move; }
+        .dt-columnReorder-helper { background-color: rgba(29, 66, 138, 0.2) !important; border: 2px dashed #1d428a !important; }
+        
+        table.dataTable { font-size: 0.85em; }
+        .dataTables_scroll { margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🏀 2026 NBA 球員數據即時查詢</h2>
+    <h2>🏀 2026 NBA 全員數據分析庫</h2>
     
     <div class="filter-section">
-        <div>
-            <label>隊伍 (Team): </label>
-            <select id="teamFilter">
-                <option value="">全部隊伍</option>
-            </select>
+        <div class="filter-item">
+            <label>更新日期 (Date):</label>
+            <select id="dateFilter"><option value="">所有日期</option></select>
         </div>
-        <div>
-            <label>球員 (Player): </label>
-            <select id="playerFilter">
-                <option value="">全部球員</option>
-            </select>
+        <div class="filter-item">
+            <label>球隊 (Team):</label>
+            <select id="teamFilter"><option value="">所有球隊</option></select>
         </div>
+        <div class="filter-item">
+            <label>球員 (Player):</label>
+            <select id="playerFilter"><option value="">所有球員</option></select>
+        </div>
+        <div style="margin-left: auto; color: #666; font-size: 0.8em;">* 標題列可點擊排序或左右拖拉更換順序</div>
     </div>
 
-    <hr>
     <table id="nbaTable" class="display nowrap" style="width:100%">
-        <thead>
-            <tr id="tableHeader"></tr>
-        </thead>
+        <thead><tr id="tableHeader"></tr></thead>
         <tbody id="tableBody"></tbody>
     </table>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/colreorder/1.7.0/js/dataTables.colReorder.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 
 <script>
-    // 請更換為你 NBA CSV 的實際 Raw 連結
-    const csvUrl = 'https://raw.githubusercontent.com/vincentkuo616/nba_data/main/NBA_Players_2025-26.csv';
+    const csvUrl = 'https://raw.githubusercontent.com/vincentkuo616/mlb_data/main/nba_data_2026.csv';
     let allData = [];
     let table;
 
@@ -72,53 +77,80 @@
             header: true,
             skipEmptyLines: true,
             complete: function(results) {
-                allData = results.data;
+                // 1. 資料清洗：處理小數點超過 3 位的情況
+                allData = results.data.map(row => {
+                    for (let key in row) {
+                        let val = row[key];
+                        // 如果是數字且包含小數點
+                        if (!isNaN(val) && val !== "" && val.toString().indexOf('.') !== -1) {
+                            let num = parseFloat(val);
+                            // 檢查小數點後的長度
+                            if (val.toString().split('.')[1].length > 3) {
+                                row[key] = num.toFixed(3);
+                            }
+                        }
+                    }
+                    return row;
+                });
+
                 const columns = Object.keys(allData[0]);
 
-                // 1. 動態生成表頭
+                // 2. 生成表頭
                 let headerHtml = '';
                 columns.forEach(col => headerHtml += `<th>${col}</th>`);
                 $('#tableHeader').html(headerHtml);
 
-                // 2. 初始化 DataTable
+                // 3. 初始化 DataTable 並啟用 ColReorder
                 table = $('#nbaTable').DataTable({
                     data: allData,
                     columns: columns.map(col => ({ data: col })),
+                    colReorder: true, // 啟動拖拉功能
                     scrollX: true,
                     pageLength: 10,
-                    order: [[14, 'desc']], // 預設依 A_PTS (得分) 降序排列
+                    order: [[14, 'desc']], // 預設依平均得分排序
                     language: {
-                        search: "關鍵字搜尋：",
-                        lengthMenu: "顯示 _MENU_ 筆",
-                        info: "共 _TOTAL_ 位球員數據"
+                        search: "快速搜尋：",
+                        info: "顯示第 _START_ 至 _END_ 筆，共 _TOTAL_ 筆"
                     }
                 });
 
-                // 3. 初始化「隊伍」下拉選單 (NBA 資料 TEAM 在第 3 欄)
+                // 4. 初始化下拉選單
+                const dates = [...new Set(allData.map(item => item.EXECUTION_DATE))].sort().reverse();
                 const teams = [...new Set(allData.map(item => item.TEAM))].sort();
+
+                dates.forEach(d => d && $('#dateFilter').append(`<option value="${d}">${d}</option>`));
                 teams.forEach(t => t && $('#teamFilter').append(`<option value="${t}">${t}</option>`));
 
-                // 4. 球隊連動篩選
-                $('#teamFilter').on('change', function() {
-                    const val = $(this).val();
-                    table.column(2).search(val).draw(); // TEAM 的索引是 2
-                    updatePlayerOptions(val);
+                // 5. 三聯動篩選邏輯
+                $('#dateFilter, #teamFilter').on('change', function() {
+                    const dateVal = $('#dateFilter').val();
+                    const teamVal = $('#teamFilter').val();
+
+                    // 執行 DataTable 篩選 (Date index 3, Team index 2)
+                    table.column(3).search(dateVal).column(2).search(teamVal).draw();
+                    
+                    updatePlayerOptions(dateVal, teamVal);
                 });
 
-                // 5. 球員篩選
                 $('#playerFilter').on('change', function() {
-                    table.column(0).search($(this).val()).draw(); // PLAYER 的索引是 0
+                    table.column(0).search($(this).val()).draw();
                 });
+
+                // 初始載入球員名單
+                updatePlayerOptions('', '');
             }
         });
 
-        function updatePlayerOptions(team) {
+        // 根據日期與球隊動態更新球員選單
+        function updatePlayerOptions(date, team) {
             const $playerSelect = $('#playerFilter');
-            $playerSelect.html('<option value="">全部球員</option>');
+            $playerSelect.html('<option value="">所有球員</option>');
 
-            const filtered = team ? allData.filter(d => d.TEAM === team) : allData;
+            let filtered = allData;
+            if (date) filtered = filtered.filter(d => d.EXECUTION_DATE === date);
+            if (team) filtered = filtered.filter(d => d.TEAM === team);
+
             const players = [...new Set(filtered.map(item => item.PLAYER))].sort();
-            
             players.forEach(p => p && $playerSelect.append(`<option value="${p}">${p}</option>`));
         }
     });
