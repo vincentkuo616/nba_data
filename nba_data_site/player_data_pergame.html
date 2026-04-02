@@ -115,7 +115,7 @@
                 columns.forEach(col => headerHtml += `<th>${col}</th>`);
                 $('#tableHeader').html(headerHtml);
 
-                // 初始化 DataTable
+                // 1. 初始化 DataTable
                 table = $('#perGameTable').DataTable({
                     data: allData,
                     columns: columns.map(col => {
@@ -140,13 +140,13 @@
                     }
                 });
 
-                // 初始化選單
+                // 2. 初始化選單
                 const dates = [...new Set(allData.map(item => item.EXECUTION_DATE))].sort().reverse();
                 const teams = [...new Set(allData.map(item => item.team))].sort();
                 dates.forEach(d => d && $('#dateFilter').append(`<option value="${d}">${d}</option>`));
                 teams.forEach(t => t && $('#teamFilter').append(`<option value="${t}">${t}</option>`));
 
-                // 篩選邏輯
+                // 3. 篩選邏輯
                 $('#dateFilter, #teamFilter').on('change', function() {
                     const dateVal = $('#dateFilter').val();
                     const teamVal = $('#teamFilter').val();
@@ -159,6 +159,23 @@
                 });
 
                 updatePlayerOptions('', '');
+                
+                // 4. 【關鍵】在這裡接收網址參數並執行篩選
+        
+                // 檢查網址是否有 ?player=xxxx 參數
+                const urlParams = new URLSearchParams(window.location.search);
+                const playerParam = urlParams.get('player');
+                
+                if (playerParam) {
+                    // 1. 設定下拉選單的值
+                    $('#playerFilter').val(playerParam);
+                    
+                    // 2. 執行 DataTables 篩選 (假設 name 在第 5 欄，index 4)
+                    // 注意：請確認你的 pergame 頁面 name 欄位正確的 index
+                    table.column(4).search(playerParam).draw();
+                    
+                    // 額外提示：如果有需要，也可以顯示一個「清除篩選」的按鈕
+                }
             }
         });
 
@@ -171,23 +188,7 @@
             const players = [...new Set(filtered.map(item => item.name))].sort();
             players.forEach(p => p && $playerSelect.append(`<option value="${p}">${p}</option>`));
         }
-
-        // --- 在 pergame 頁面的 complete 回呼函數最後加入以下代碼 ---
-
-        // 檢查網址是否有 ?player=xxxx 參數
-        const urlParams = new URLSearchParams(window.location.search);
-        const playerParam = urlParams.get('player');
         
-        if (playerParam) {
-            // 1. 設定下拉選單的值
-            $('#playerFilter').val(playerParam);
-            
-            // 2. 執行 DataTables 篩選 (假設 name 在第 5 欄，index 4)
-            // 注意：請確認你的 pergame 頁面 name 欄位正確的 index
-            table.column(4).search(playerParam).draw();
-            
-            // 額外提示：如果有需要，也可以顯示一個「清除篩選」的按鈕
-        }
     });
 </script>
 
