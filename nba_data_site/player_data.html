@@ -103,11 +103,26 @@
                 // 3. 初始化 DataTable 並啟用 ColReorder
                 table = $('#nbaTable').DataTable({
                     data: allData,
-                    columns: columns.map(col => ({ data: col })),
-                    colReorder: true, // 啟動拖拉功能
+                    columns: columns.map((col, index) => {
+                        return {
+                            data: col,
+                            render: function(data, type, row) {
+                                // 如果是 PLAYER 欄位 (index 0)，將其包裝成超連結
+                                if (col === 'PLAYER' && type === 'display') {
+                                    // 跳轉到 pergame 頁面，並帶入 player 參數
+                                    return `<a href="player_data_pergame.html?player=${encodeURIComponent(data)}" 
+                                               style="color: #1d428a; font-weight: bold; text-decoration: none;">
+                                               ${data} 🔗
+                                            </a>`;
+                                }
+                                return data;
+                            }
+                        };
+                    }),
+                    colReorder: true,
                     scrollX: true,
                     pageLength: 10,
-                    order: [[14, 'desc']], // 預設依平均得分排序
+                    order: [[14, 'desc']],
                     language: {
                         search: "快速搜尋：",
                         info: "顯示第 _START_ 至 _END_ 筆，共 _TOTAL_ 筆"
