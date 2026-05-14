@@ -17,7 +17,20 @@ from nba_api.stats.endpoints import leagueleaders
 from nba_api.stats.endpoints import leaguestandings
 from nba_api.live.nba.endpoints import scoreboard
 import pandas as pd
-games = scoreboard.ScoreBoard()
+
+# 定義偽裝成一般瀏覽器的 Headers
+custom_headers = {
+    'Host': 'cdn.nba.com',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.5',
+    'Referer': 'https://www.nba.com/',
+    'Origin': 'https://www.nba.com',
+    'Connection': 'keep-alive',
+    'If-Modified-Since': 'Sat, 01 Jan 2024 00:00:00 GMT' # 有時候加這個能避開快取阻擋
+}
+
+games = scoreboard.ScoreBoard(headers=custom_headers)
 games_dict = games.get_dict()['scoreboard']['games']
 '''
 finalFlag  0:全部    1:只看進行中的
@@ -61,7 +74,7 @@ import numpy as np
 li = [['team','num','name','min','pts','ass','reb','stl','blk','to','foul','%','2%','3%','3#','3#/','2#','2#/','1#','1#/','EFF']]
 for gameID in gameIDList:
 
-    box = BoxScore(gameID)
+    box = BoxScore(gameID, headers=custom_headers)
     box_dict = box.get_dict()
     
     awayTeam = box_dict['game']['awayTeam']['players']
