@@ -70,6 +70,7 @@
     const csvUrl = 'https://raw.githubusercontent.com/vincentkuo616/nba_data/main/NBA_Players_PerGame_2025-26.csv'; 
     let allData = [];
     let table;
+    let colIndexes = {}; // 用來存放欄位名稱與 index 的對照表
 
     // ISO 8601 Duration 轉換函數 (PT30M16.00S -> 30:16)
     function formatDuration(iso) {
@@ -87,11 +88,16 @@
             header: true,
             skipEmptyLines: true,
             complete: function(results) {
+                if (!results.data || results.data.length === 0) {
+                    console.error("CSV 沒有資料");
+                    return;
+                }
+
                 // 資料清洗與格式化
                 allData = results.data.map(row => {
                     for (let key in row) {
                         // 1. 處理時間格式
-                        if (key === 'min') {
+                        if (key.toLowerCase() === 'min') {
                             row[key] = formatDuration(row[key]);
                         }
                         // 2. 處理百分比欄位 (%, 2%, 3%)
@@ -108,7 +114,13 @@
                     return row;
                 });
 
-                const columns = Object.keys(allData[0]).filter(c => c !== ""); // 過濾掉第一欄空的 index
+                // 動態取得非空欄位名稱
+                const columns = Object.keys(allData[0]).filter(c => c.trim() !== "");
+
+                // 建立欄位名稱與 Index 的動態對照表 (核心防禦機制)
+                columns.forEach((colName, index) => {
+                    colIndexes[colName] = index;
+                });
 
                 // 生成表頭
                 let headerHtml = '';
@@ -124,73 +136,100 @@
                             render: function(data, type, row) {
                                 if (col === 'EFF' && type === 'display') {
                                     let val = parseFloat(data);
-                                    return `<span class="${val >= 0 ? 'eff-positive' : 'eff-negative'}">${data}</span>`;
+                                    return `<span class="${val >= 0 ? 'eff-positive' : 'eff-negative'}">${data || 0}</span>`;
                                 }
-                                return data;
+                                return data || '';
                             }
                         };
                     }),
                     colReorder: true,
                     scrollX: true,
                     pageLength: 15,
-                    order: [[1, 'desc']], // 預設依日期排序
+                    order: [[colIndexes['EXECUTION_DATE'] || 0, 'desc']], // 動態對齊日期排序
                     language: {
                         search: "快速搜尋：",
-                        info: "顯示 _TOTAL_ 筆比賽紀錄"
+                        info: "顯示 _TOTAL_ 筆比賽紀錄",
+                        zeroRecords: "沒有符合的比賽紀錄",
+                        infoEmpty: "顯示 0 筆比賽紀錄"
                     }
                 });
 
                 // 2. 初始化選單
-                const dates = [...new Set(allData.map(item => item.EXECUTION_DATE))].sort().reverse();
-                const teams = [...new Set(allData.map(item => item.team))].sort();
-                dates.forEach(d => d && $('#dateFilter').append(`<option value="${d}">${d}</option>`));
-                teams.forEach(t => t && $('#teamFilter').append(`<option value="${t}">${t}</option>`));
+                const dates = [...new Set(allData.map(item => item.EXECUTION_DATE))].filter(Boolean).sort().reverse();
+                const teams = [...new Set(allData.map(item => item.team))].filter(Boolean).sort();
+                
+                dates.forEach(d => $('#dateFilter').append(`<option value="${d}">${d}</option>`));
+                teams.forEach(t => $('#teamFilter').append(`<option value="${t}">${t}</option>`));
 
-                // 3. 篩選邏輯
+                // 初始化球員下拉選單
+                updatePlayerOptions('', '');
+
+                // 3. 篩選邏輯 (改用動態 Index)
                 $('#dateFilter, #teamFilter').on('change', function() {
                     const dateVal = $('#dateFilter').val();
                     const teamVal = $('#teamFilter').val();
-                    table.column(1).search(dateVal).column(2).search(teamVal).draw();
+                    
+                    // 動態防禦：如果找不到對應欄位，就不執行 search 避免崩潰
+                    if (colIndexes['EXECUTION_DATE'] !== undefined) {
+                        table.column(colIndexes['EXECUTION_DATE']).search(dateVal);
+                    }
+                    if (colIndexes['team'] !== undefined) {
+                        table.column(colIndexes['team']).search(teamVal);
+                    }
+                    
+                    // 重置球員選單並重置球員搜尋條件
+                    if (colIndexes['name'] !== undefined) {
+                        table.column(colIndexes['name']).search('');
+                    }
+                    
+                    table.draw();
                     updatePlayerOptions(dateVal, teamVal);
                 });
 
                 $('#playerFilter').on('change', function() {
-                    table.column(4).search($(this).val()).draw(); // name 在第 5 欄 (index 4)
+                    const playerVal = $(this).val();
+                    if (colIndexes['name'] !== undefined) {
+                        table.column(colIndexes['name']).search(playerVal).draw();
+                    }
                 });
 
-                updatePlayerOptions('', '');
-                
-                // 4. 【關鍵】在這裡接收網址參數並執行篩選
-        
-                // 檢查網址是否有 ?player=xxxx 參數
+                // 4. URL 參數精確注入機制
                 const urlParams = new URLSearchParams(window.location.search);
                 const playerParam = urlParams.get('player');
                 
-                if (playerParam) {
-                    // 1. 設定下拉選單的值
+                if (playerParam && colIndexes['name'] !== undefined) {
+                    // 先確保球員選單裡有這個球員（即使被前面預設篩選濾掉也強制加入，避免 UI 顯示空白）
+                    if ($(`#playerFilter option[value="${playerParam}"]`).length === 0) {
+                        $('#playerFilter').append(`<option value="${playerParam}">${playerParam}</option>`);
+                    }
+                    
+                    // 賦值並觸發 DataTable 篩選
                     $('#playerFilter').val(playerParam);
-                    
-                    // 2. 執行 DataTables 篩選 (假設 name 在第 5 欄，index 4)
-                    // 注意：請確認你的 pergame 頁面 name 欄位正確的 index
-                    table.column(4).search(playerParam).draw();
-                    
-                    // 額外提示：如果有需要，也可以顯示一個「清除篩選」的按鈕
+                    table.column(colIndexes['name']).search(playerParam).draw();
                 }
             }
         });
 
+        // 動態過濾球員清單函數
         function updatePlayerOptions(date, team) {
             const $playerSelect = $('#playerFilter');
+            const currentVal = $playerSelect.val(); // 記住當前使用者的選擇
+            
             $playerSelect.html('<option value="">所有球員</option>');
+            
             let filtered = allData;
             if (date) filtered = filtered.filter(d => d.EXECUTION_DATE === date);
             if (team) filtered = filtered.filter(d => d.team === team);
-            const players = [...new Set(filtered.map(item => item.name))].sort();
-            players.forEach(p => p && $playerSelect.append(`<option value="${p}">${p}</option>`));
+            
+            const players = [...new Set(filtered.map(item => item.name))].filter(Boolean).sort();
+            players.forEach(p => $playerSelect.append(`<option value="${p}">${p}</option>`));
+            
+            // 如果原本選的球員還在清單中，就幫他還原選取狀態
+            if (players.includes(currentVal)) {
+                $playerSelect.val(currentVal);
+            }
         }
-        
     });
 </script>
-
 </body>
 </html>
