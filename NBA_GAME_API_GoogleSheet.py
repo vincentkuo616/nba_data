@@ -75,7 +75,8 @@ import numpy as np
 li = [['team','num','name','min','pts','ass','reb','stl','blk','to','foul','%','2%','3%','3#','3#/','2#','2#/','1#','1#/','EFF']]
 for gameID in gameIDList:
 
-    box = BoxScore(gameID, headers=custom_headers)
+    # box = BoxScore(gameID, headers=custom_headers)
+    box = BoxScore(gameID)
     box_dict = box.get_dict()
     
     awayTeam = box_dict['game']['awayTeam']['players']
