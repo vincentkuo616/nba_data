@@ -30,7 +30,8 @@ custom_headers = {
     'If-Modified-Since': 'Sat, 01 Jan 2024 00:00:00 GMT' # 有時候加這個能避開快取阻擋
 }
 
-games = scoreboard.ScoreBoard(headers=custom_headers)
+# games = scoreboard.ScoreBoard(headers=custom_headers)
+games = scoreboard.ScoreBoard()
 games_dict = games.get_dict()['scoreboard']['games']
 '''
 finalFlag  0:全部    1:只看進行中的
